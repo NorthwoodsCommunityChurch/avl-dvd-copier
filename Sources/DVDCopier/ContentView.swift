@@ -6,6 +6,7 @@ struct ContentView: View {
 
     @State private var selectedTitleIDs: Set<Int> = []
     @AppStorage("outputFolderBookmark") private var outputFolderBookmark: Data = Data()
+    @AppStorage("autoRip") private var autoRip: Bool = false
     @State private var outputFolder: URL? = nil
 
     private var canRip: Bool {
@@ -18,7 +19,10 @@ struct ContentView: View {
             headerSection
             Divider()
 
-            if ripper.discDetected {
+            if ripper.isComplete && !ripper.discDetected {
+                // Rip finished and disc ejected — show completion
+                ripCompleteView
+            } else if ripper.discDetected {
                 titlesSection
                 Divider()
                 outputSection
@@ -31,18 +35,24 @@ struct ContentView: View {
         .frame(width: 540)
         .onAppear {
             restoreOutputFolder()
-            ripper.startWatching()
-            // Scan on first appear as a fallback (DA callback also fires for already-inserted discs)
-            if !ripper.discDetected && !ripper.isRipping && !ripper.isComplete {
-                ripper.scan()
+            ripper.onRipComplete = { [self] in
+                ejectAfterRip()
             }
+            ripper.startWatching()
         }
-        // Auto-select the largest title after scan
+        // Auto-select the largest title after scan (or all titles if auto-rip)
         .onChange(of: ripper.titles) { titles in
-            if let first = titles.first {
+            if autoRip {
+                selectedTitleIDs = Set(titles.map(\.id))
+            } else if let first = titles.first {
                 selectedTitleIDs = [first.id]
             } else {
                 selectedTitleIDs = []
+            }
+
+            // Auto-rip: start immediately if toggle is on and output folder is set
+            if autoRip && !titles.isEmpty && outputFolder != nil && !ripper.isRipping {
+                startRip()
             }
         }
         .alert("Error", isPresented: .constant(ripper.errorMessage != nil)) {
@@ -111,6 +121,32 @@ struct ContentView: View {
         .padding(48)
     }
 
+    private var ripCompleteView: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 60))
+                .foregroundStyle(.green)
+            Text("Rip Complete")
+                .font(.title3)
+            Text(ripper.statusMessage)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+                Button("Show in Finder") { revealOutput() }
+                    .buttonStyle(.bordered)
+                Button("Done") {
+                    ripper.isComplete = false
+                    ripper.progress = 0
+                    ripper.statusMessage = ""
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(48)
+    }
+
     private var noDVDView: some View {
         VStack(spacing: 14) {
             Image(systemName: "opticaldisc")
@@ -122,6 +158,45 @@ struct ContentView: View {
             Text("Insert a DVD — it will be detected automatically")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
+
+            VStack(spacing: 8) {
+                Toggle("Auto-rip all titles on insert", isOn: $autoRip)
+                    .toggleStyle(.checkbox)
+                    .font(.caption)
+                if autoRip && outputFolder == nil {
+                    Text("Choose an output folder first")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+                if autoRip && outputFolder != nil {
+                    Text("Ready — insert a disc and walk away")
+                        .font(.caption2)
+                        .foregroundStyle(.green)
+                }
+            }
+            .padding(.top, 8)
+
+            if outputFolder == nil {
+                Button("Choose Output Folder…") { pickFolder() }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: "folder")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                    Text(outputFolder!.lastPathComponent)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button {
+                        pickFolder()
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.caption2)
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(48)
@@ -233,6 +308,15 @@ struct ContentView: View {
             }
             .padding(.horizontal, 16)
 
+            // Auto-rip toggle
+            HStack {
+                Toggle("Auto-rip all titles on insert", isOn: $autoRip)
+                    .toggleStyle(.checkbox)
+                    .font(.caption)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+
             // Progress bar (visible while ripping or after completion)
             if ripper.isRipping || ripper.isComplete {
                 VStack(spacing: 5) {
@@ -319,10 +403,20 @@ struct ContentView: View {
     }
 
     private func ejectDisc() {
-        // Eject via drutil — DA disappeared callback will also fire
         _ = Process.run("/usr/bin/drutil", args: ["eject"])
         ripper.resetDisc()
         ripper.statusMessage = "Disc ejected — insert another DVD"
+    }
+
+    private func ejectAfterRip() {
+        ripper.statusMessage = "Rip complete — ejecting disc…"
+        // Brief delay so the user sees the completion message
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            _ = Process.run("/usr/bin/drutil", args: ["eject"])
+            self.ripper.statusMessage = "Rip complete — disc ejected. Insert another DVD."
+            // DA eject callback will handle resetDisc, but keep isComplete true
+            // so the UI still shows the completion state
+        }
     }
 
     // MARK: - Folder Persistence

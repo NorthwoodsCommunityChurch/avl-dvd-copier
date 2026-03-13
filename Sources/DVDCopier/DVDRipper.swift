@@ -16,8 +16,13 @@ class DVDRipper: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var discDetected = false
 
+    /// Called when all titles finish ripping successfully
+    var onRipComplete: (() -> Void)?
+
     private var ripProcess: Process?
     private let discWatcher = DiscWatcher()
+    /// True when DiskArbitration has confirmed an optical disc is present
+    private var discConfirmedByDA = false
 
     private let makemkvconPath = "/Applications/MakeMKV.app/Contents/MacOS/makemkvcon"
 
@@ -26,16 +31,25 @@ class DVDRipper: ObservableObject {
     func startWatching() {
         discWatcher.onDiscInserted = { [weak self] in
             Task { @MainActor [weak self] in
-                guard let self, !self.isRipping, !self.isScanning else { return }
+                guard let self else { return }
+                self.discConfirmedByDA = true
+                // New disc clears any previous completion state
+                if self.isComplete {
+                    self.isComplete = false
+                    self.progress = 0
+                }
+                guard !self.isRipping, !self.isScanning else { return }
                 self.statusMessage = "Disc detected, reading…"
                 try? await Task.sleep(nanoseconds: 3_000_000_000) // 3s for drive spin-up
-                guard !self.isRipping, !self.isScanning else { return } // re-check after delay
+                guard !self.isRipping, !self.isScanning else { return }
                 self.scan()
             }
         }
         discWatcher.onDiscEjected = { [weak self] in
             Task { @MainActor [weak self] in
-                self?.resetDisc()
+                guard let self else { return }
+                self.discConfirmedByDA = false
+                self.resetDisc()
             }
         }
         discWatcher.start()
@@ -43,12 +57,15 @@ class DVDRipper: ObservableObject {
 
     func resetDisc() {
         guard !isRipping else { return }
+        discConfirmedByDA = false
         discDetected = false
         titles = []
         discName = ""
-        isComplete = false
-        progress = 0
-        statusMessage = ""
+        // Keep completion state visible after auto-eject so user sees the result
+        if !isComplete {
+            progress = 0
+            statusMessage = ""
+        }
     }
 
     var isMakeMKVInstalled: Bool {
@@ -63,8 +80,8 @@ class DVDRipper: ObservableObject {
             return
         }
 
-        // Don't scan while ripping or already scanning
-        guard !isRipping && !isScanning else { return }
+        // Don't scan while ripping, already scanning, or after rip completed
+        guard !isRipping && !isScanning && !isComplete else { return }
 
         isScanning = true
         discDetected = false
@@ -139,8 +156,12 @@ class DVDRipper: ObservableObject {
             }
 
             // MSG:5010 — "Failed to open disc"
+            // Only show error if DiskArbitration confirmed a disc is actually present.
+            // Otherwise this just means no disc is inserted — not an error.
             if line.contains("MSG:5010") {
-                errorMessage = "Failed to open disc. Make sure the DVD is inserted and MakeMKV is not already open."
+                if discConfirmedByDA {
+                    errorMessage = "Failed to open disc. Make sure MakeMKV is not already open."
+                }
                 discDetected = false
                 return
             }
@@ -292,6 +313,10 @@ class DVDRipper: ObservableObject {
                 await ripAndWait(titleIndex: index, outputDir: actualDir)
                 // Check if cancelled
                 if !isRipping && !isComplete { break }
+            }
+            // Auto-eject after all titles complete
+            if isComplete {
+                onRipComplete?()
             }
         }
     }
