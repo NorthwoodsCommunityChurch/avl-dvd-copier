@@ -22,10 +22,13 @@ struct ContentView: View {
             if ripper.isComplete && !ripper.discDetected {
                 // Rip finished and disc ejected — show completion
                 ripCompleteView
-            } else if ripper.discDetected {
+            } else if ripper.discDetected && !ripper.titles.isEmpty {
                 titlesSection
                 Divider()
                 outputSection
+            } else if ripper.discDetected && ripper.titles.isEmpty && !ripper.isScanning {
+                // Disc is present but has no rippable content
+                discUnreadableView
             } else if ripper.isScanning {
                 scanningView
             } else {
@@ -142,6 +145,24 @@ struct ContentView: View {
                 .buttonStyle(.borderedProminent)
             }
             .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(48)
+    }
+
+    private var discUnreadableView: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 60))
+                .foregroundStyle(.orange)
+            Text("Can't Read Disc")
+                .font(.title3)
+            Text(ripper.statusMessage)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("Eject Disc") { ejectDisc() }
+                .buttonStyle(.bordered)
+                .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(48)
@@ -409,13 +430,17 @@ struct ContentView: View {
     }
 
     private func ejectAfterRip() {
+        // Block DA callbacks during eject — MakeMKV releasing the disc causes
+        // a spurious "disc appeared" event that would trigger a scan
+        ripper.isEjecting = true
         ripper.statusMessage = "Rip complete — ejecting disc…"
-        // Brief delay so the user sees the completion message
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             _ = Process.run("/usr/bin/drutil", args: ["eject"])
             self.ripper.statusMessage = "Rip complete — disc ejected. Insert another DVD."
-            // DA eject callback will handle resetDisc, but keep isComplete true
-            // so the UI still shows the completion state
+            // Give the drive time to fully eject before accepting new DA events
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                self.ripper.isEjecting = false
+            }
         }
     }
 

@@ -23,6 +23,8 @@ class DVDRipper: ObservableObject {
     private let discWatcher = DiscWatcher()
     /// True when DiskArbitration has confirmed an optical disc is present
     private var discConfirmedByDA = false
+    /// True while ejecting after a rip — blocks DA insert callbacks from triggering scans
+    var isEjecting = false
 
     private let makemkvconPath = "/Applications/MakeMKV.app/Contents/MacOS/makemkvcon"
 
@@ -32,6 +34,9 @@ class DVDRipper: ObservableObject {
         discWatcher.onDiscInserted = { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                // Ignore DA callbacks while ejecting — MakeMKV releasing the disc
+                // causes DA to fire a spurious "appeared" event
+                guard !self.isEjecting else { return }
                 self.discConfirmedByDA = true
                 // New disc clears any previous completion state
                 if self.isComplete {
@@ -41,7 +46,7 @@ class DVDRipper: ObservableObject {
                 guard !self.isRipping, !self.isScanning else { return }
                 self.statusMessage = "Disc detected, reading…"
                 try? await Task.sleep(nanoseconds: 3_000_000_000) // 3s for drive spin-up
-                guard !self.isRipping, !self.isScanning else { return }
+                guard !self.isRipping, !self.isScanning, !self.isEjecting else { return }
                 self.scan()
             }
         }
@@ -140,9 +145,16 @@ class DVDRipper: ObservableObject {
         var parsed: [DVDTitle] = []
         // Temp storage keyed by title index
         var titleData: [Int: [Int: String]] = [:]  // [titleIdx: [attrCode: value]]
+        var driveDescription = ""
 
         for rawLine in output.components(separatedBy: "\n") {
             let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // DRV:0,2,999,0,"DVD+R-DL ...","DISC_NAME","/dev/rdisk4"
+            // Capture the drive/media description for better error messages
+            if line.hasPrefix("DRV:0,") {
+                driveDescription = line
+            }
 
             // CINFO:2,0,"Disc Name"
             if line.hasPrefix("CINFO:2,") {
@@ -156,13 +168,18 @@ class DVDRipper: ObservableObject {
             }
 
             // MSG:5010 — "Failed to open disc"
-            // Only show error if DiskArbitration confirmed a disc is actually present.
-            // Otherwise this just means no disc is inserted — not an error.
+            // Show a status message (not an error dialog) so user can rescan or eject.
             if line.contains("MSG:5010") {
                 if discConfirmedByDA {
-                    errorMessage = "Failed to open disc. Make sure MakeMKV is not already open."
+                    discDetected = true
+                    // Extract disc name from DRV line if we didn't get it from CINFO
+                    if discName.isEmpty, let name = extractDRVDiscName(driveDescription) {
+                        discName = name
+                    }
+                    statusMessage = "Could not read disc — try Rescan or eject"
+                } else {
+                    discDetected = false
                 }
-                discDetected = false
                 return
             }
 
@@ -204,7 +221,7 @@ class DVDRipper: ObservableObject {
         titles = parsed.sorted { $0.durationSeconds > $1.durationSeconds }
 
         if discDetected && titles.isEmpty {
-            statusMessage = "No titles found on disc."
+            statusMessage = "No rippable content — this may not be a DVD video disc"
         } else if discDetected {
             statusMessage = "Found \(titles.count) title\(titles.count == 1 ? "" : "s")"
         } else {
@@ -380,6 +397,9 @@ class DVDRipper: ObservableObject {
                         if self.currentRipIndex >= self.totalRipCount {
                             self.statusMessage = "Done!"
                             self.isRipping = false
+                            // Block DA callbacks immediately — MakeMKV releasing the
+                            // disc triggers a spurious "appeared" event before ejectAfterRip runs
+                            self.isEjecting = true
                         }
                     } else if p.terminationStatus == 15 {
                         // Cancelled
@@ -440,6 +460,15 @@ class DVDRipper: ObservableObject {
     }
 
     // MARK: - Helpers
+
+    /// Extract the disc name (second quoted field) from DRV line:
+    /// DRV:0,2,999,0,"drive info","DISC_NAME","/dev/rdisk4"
+    private func extractDRVDiscName(_ line: String) -> String? {
+        let parts = line.components(separatedBy: "\"")
+        // parts[0]="DRV:...,", parts[1]="drive info", parts[2]=",", parts[3]="DISC_NAME", ...
+        guard parts.count >= 4, !parts[3].isEmpty else { return nil }
+        return parts[3]
+    }
 
     private func extractQuotedValue(_ line: String) -> String? {
         // Extract the LAST quoted string from a line like: TINFO:0,9,0,"1:18:58"
