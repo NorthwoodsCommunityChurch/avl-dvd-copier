@@ -1,0 +1,23 @@
+# Build artifacts
+.build/
+*.app
+*.zip
+*.dmg
+
+# IDE
+.vscode/
+.swiftpm/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+
+# macOS
+.DS_Store
+*.dSYM
+
+# Sparkle private key — NEVER commit
+ed25519-private.txt
+
+# Icon source (keep .icns, not the working SVG)
+AppIcon.iconset/

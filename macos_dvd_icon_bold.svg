@@ -1,0 +1,115 @@
+<svg width="100%" viewBox="0 0 680 680" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<clipPath id="sq">
+<path d="M340 56 C476 56 624 56 624 192 C624 328 624 488 624 488 C624 624 476 624 340 624 C204 624 56 624 56 488 C56 352 56 192 56 192 C56 56 204 56 340 56Z"/>
+</clipPath>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0%" stop-color="#0E1525"/>
+<stop offset="100%" stop-color="#060B14"/>
+</linearGradient>
+<linearGradient id="disc" x1="0.15" y1="0.1" x2="0.85" y2="0.9">
+<stop offset="0%" stop-color="#C0C8D8"/>
+<stop offset="30%" stop-color="#8890A4"/>
+<stop offset="50%" stop-color="#A0A8BC"/>
+<stop offset="70%" stop-color="#8088A0"/>
+<stop offset="100%" stop-color="#9098B0"/>
+</linearGradient>
+<linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0%" stop-color="#D0D8E8"/>
+<stop offset="50%" stop-color="#707890"/>
+<stop offset="100%" stop-color="#B0B8CC"/>
+</linearGradient>
+<linearGradient id="hub" x1="0.2" y1="0" x2="0.8" y2="1">
+<stop offset="0%" stop-color="#606878"/>
+<stop offset="100%" stop-color="#3A4050"/>
+</linearGradient>
+<linearGradient id="sheen" x1="0.1" y1="0.1" x2="0.5" y2="0.5">
+<stop offset="0%" stop-color="rgba(255,255,255,0.25)"/>
+<stop offset="60%" stop-color="rgba(255,255,255,0)"/>
+</linearGradient>
+<linearGradient id="rainbow1" x1="0" y1="0" x2="1" y2="0.5">
+<stop offset="0%" stop-color="rgba(0,180,255,0)"/>
+<stop offset="30%" stop-color="rgba(0,200,255,0.35)"/>
+<stop offset="60%" stop-color="rgba(140,80,255,0.3)"/>
+<stop offset="100%" stop-color="rgba(140,80,255,0)"/>
+</linearGradient>
+<linearGradient id="rainbow2" x1="1" y1="0.3" x2="0" y2="1">
+<stop offset="0%" stop-color="rgba(255,60,120,0)"/>
+<stop offset="40%" stop-color="rgba(255,60,120,0.2)"/>
+<stop offset="70%" stop-color="rgba(255,180,40,0.18)"/>
+<stop offset="100%" stop-color="rgba(255,180,40,0)"/>
+</linearGradient>
+<linearGradient id="rainbow3" x1="0.5" y1="1" x2="0.5" y2="0">
+<stop offset="0%" stop-color="rgba(0,255,180,0)"/>
+<stop offset="50%" stop-color="rgba(0,255,180,0.15)"/>
+<stop offset="100%" stop-color="rgba(0,255,180,0)"/>
+</linearGradient>
+<linearGradient id="glow" x1="0.5" y1="0.5" x2="0.5" y2="1" gradientUnits="userSpaceOnUse">
+<stop offset="0%" stop-color="rgba(0,160,255,0)"/>
+<stop offset="100%" stop-color="rgba(0,160,255,0.12)"/>
+</linearGradient>
+</defs>
+
+<g clip-path="url(#sq)">
+<rect x="56" y="56" width="568" height="568" fill="url(#bg)"/>
+
+<line x1="56" y1="170" x2="624" y2="170" stroke="rgba(255,255,255,0.015)" stroke-width="0.5"/>
+<line x1="56" y1="284" x2="624" y2="284" stroke="rgba(255,255,255,0.015)" stroke-width="0.5"/>
+<line x1="56" y1="398" x2="624" y2="398" stroke="rgba(255,255,255,0.015)" stroke-width="0.5"/>
+<line x1="56" y1="512" x2="624" y2="512" stroke="rgba(255,255,255,0.015)" stroke-width="0.5"/>
+<line x1="170" y1="56" x2="170" y2="624" stroke="rgba(255,255,255,0.015)" stroke-width="0.5"/>
+<line x1="284" y1="56" x2="284" y2="624" stroke="rgba(255,255,255,0.015)" stroke-width="0.5"/>
+<line x1="398" y1="56" x2="398" y2="624" stroke="rgba(255,255,255,0.015)" stroke-width="0.5"/>
+<line x1="512" y1="56" x2="512" y2="624" stroke="rgba(255,255,255,0.015)" stroke-width="0.5"/>
+
+<ellipse cx="340" cy="390" rx="200" ry="30" fill="rgba(0,140,255,0.07)"/>
+
+<circle cx="340" cy="340" r="220" fill="url(#disc)"/>
+<circle cx="340" cy="340" r="220" fill="none" stroke="url(#rim)" stroke-width="2"/>
+
+<circle cx="340" cy="340" r="215" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="205" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="195" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="185" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="175" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="165" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="155" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="145" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="135" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="125" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="115" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="105" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="0.3"/>
+<circle cx="340" cy="340" r="95" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="0.3"/>
+
+<path d="M340 120 A220 220 0 0 1 560 340" stroke="url(#rainbow1)" stroke-width="50" fill="none"/>
+<path d="M560 340 A220 220 0 0 1 400 556" stroke="url(#rainbow2)" stroke-width="45" fill="none"/>
+<path d="M280 556 A220 220 0 0 1 120 340" stroke="url(#rainbow3)" stroke-width="40" fill="none"/>
+
+<circle cx="340" cy="340" r="220" fill="url(#sheen)"/>
+
+<circle cx="340" cy="340" r="65" fill="url(#hub)"/>
+<circle cx="340" cy="340" r="65" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+
+<circle cx="340" cy="340" r="18" fill="#0A0F1A"/>
+<circle cx="340" cy="340" r="18" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>
+<circle cx="340" cy="340" r="14" fill="none" stroke="rgba(0,180,255,0.3)" stroke-width="0.8"/>
+
+<circle cx="340" cy="340" r="220" fill="none" stroke="rgba(0,180,255,0.12)" stroke-width="0.5" stroke-dasharray="4 10"/>
+
+<circle cx="280" cy="190" r="3.5" fill="rgba(0,220,255,0.4)"/>
+<circle cx="470" cy="260" r="2.5" fill="rgba(140,80,255,0.35)"/>
+<circle cx="420" cy="480" r="3" fill="rgba(255,60,120,0.25)"/>
+<circle cx="210" cy="400" r="2.5" fill="rgba(0,255,180,0.25)"/>
+<circle cx="380" cy="160" r="2" fill="rgba(255,255,255,0.3)"/>
+<circle cx="500" cy="380" r="2" fill="rgba(255,180,40,0.2)"/>
+
+<text x="108" y="598" font-family="SF Mono, Menlo, monospace" font-size="11" fill="rgba(0,200,255,0.35)" letter-spacing="3">DVD</text>
+<text x="480" y="598" font-family="SF Mono, Menlo, monospace" font-size="11" fill="rgba(0,200,255,0.25)" letter-spacing="1.5">4.7 GB</text>
+
+<rect x="108" y="96" width="4" height="4" rx="1" fill="rgba(0,200,255,0.3)"/>
+<rect x="118" y="96" width="4" height="4" rx="1" fill="rgba(0,200,255,0.2)"/>
+<rect x="128" y="96" width="4" height="4" rx="1" fill="rgba(0,200,255,0.12)"/>
+</g>
+
+<path d="M340 56 C476 56 624 56 624 192 C624 328 624 488 624 488 C624 624 476 624 340 624 C204 624 56 624 56 488 C56 352 56 192 56 192 C56 56 204 56 340 56Z" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+</svg>
