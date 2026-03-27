@@ -20,45 +20,12 @@ class DVDRipper: ObservableObject {
     var onRipComplete: (() -> Void)?
 
     private var ripProcess: Process?
-    private let discWatcher = DiscWatcher()
     /// True when DiskArbitration has confirmed an optical disc is present
-    private var discConfirmedByDA = false
+    var discConfirmedByDA = false
     /// True while ejecting after a rip — blocks DA insert callbacks from triggering scans
     var isEjecting = false
 
     private let makemkvconPath = "/Applications/MakeMKV.app/Contents/MacOS/makemkvcon"
-
-    // MARK: - Disc Watching
-
-    func startWatching() {
-        discWatcher.onDiscInserted = { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                // Ignore DA callbacks while ejecting — MakeMKV releasing the disc
-                // causes DA to fire a spurious "appeared" event
-                guard !self.isEjecting else { return }
-                self.discConfirmedByDA = true
-                // New disc clears any previous completion state
-                if self.isComplete {
-                    self.isComplete = false
-                    self.progress = 0
-                }
-                guard !self.isRipping, !self.isScanning else { return }
-                self.statusMessage = "Disc detected, reading…"
-                try? await Task.sleep(nanoseconds: 3_000_000_000) // 3s for drive spin-up
-                guard !self.isRipping, !self.isScanning, !self.isEjecting else { return }
-                self.scan()
-            }
-        }
-        discWatcher.onDiscEjected = { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.discConfirmedByDA = false
-                self.resetDisc()
-            }
-        }
-        discWatcher.start()
-    }
 
     func resetDisc() {
         guard !isRipping else { return }
@@ -320,6 +287,18 @@ class DVDRipper: ObservableObject {
         totalRipCount = titleIndices.count
         currentRipIndex = 0
 
+        // When all scanned titles are selected, use "all" for a single makemkvcon
+        // invocation — avoids repeated disc initialization overhead on multi-title discs
+        if titleIndices.count == titles.count {
+            Task {
+                await ripAllAndWait(outputDir: actualDir)
+                if isComplete {
+                    onRipComplete?()
+                }
+            }
+            return
+        }
+
         Task {
             for index in titleIndices {
                 guard ripProcess == nil || ripProcess?.isRunning == false else { break }
@@ -403,6 +382,79 @@ class DVDRipper: ObservableObject {
                         }
                     } else if p.terminationStatus == 15 {
                         // Cancelled
+                        self.isRipping = false
+                    } else {
+                        self.errorMessage = "Rip failed (exit code \(p.terminationStatus))"
+                        self.isRipping = false
+                    }
+                    continuation.resume()
+                }
+            }
+
+            try? process.run()
+        }
+    }
+
+    /// Rip all titles in a single makemkvcon invocation using the "all" keyword.
+    /// Much faster than sequential per-title rips on discs with many titles.
+    private func ripAllAndWait(outputDir: URL) async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            isRipping = true
+            isComplete = false
+            progress = 0
+            progressMax = 1
+            errorMessage = nil
+            statusMessage = "Ripping all \(totalRipCount) title\(totalRipCount == 1 ? "" : "s")…"
+
+            let process = Process()
+            ripProcess = process
+            process.executableURL = URL(fileURLWithPath: makemkvconPath)
+            process.arguments = [
+                "--robot",
+                "--progress=-same",
+                "--minlength=0",
+                "mkv",
+                "disc:0",
+                "all",
+                outputDir.path
+            ]
+
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = pipe
+
+            var lineBuffer = ""
+            pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+                let data = handle.availableData
+                guard !data.isEmpty,
+                      let chunk = String(data: data, encoding: .utf8) else { return }
+
+                lineBuffer += chunk
+                while let newlineRange = lineBuffer.range(of: "\n") {
+                    let line = String(lineBuffer[..<newlineRange.lowerBound])
+                    lineBuffer = String(lineBuffer[newlineRange.upperBound...])
+                    Task { @MainActor [weak self] in
+                        self?.parseProgressLine(line)
+                    }
+                }
+            }
+
+            process.terminationHandler = { [weak self] p in
+                Task { @MainActor [weak self] in
+                    guard let self else {
+                        continuation.resume()
+                        return
+                    }
+                    self.ripProcess = nil
+                    pipe.fileHandleForReading.readabilityHandler = nil
+
+                    if p.terminationStatus == 0 {
+                        self.isComplete = true
+                        self.progress = 1.0
+                        self.statusMessage = "Done!"
+                        self.isRipping = false
+                        self.isEjecting = true
+                    } else if p.terminationStatus == 15 {
                         self.isRipping = false
                     } else {
                         self.errorMessage = "Rip failed (exit code \(p.terminationStatus))"

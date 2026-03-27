@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-APP_NAME="DVD Copier"
+APP_NAME="Disc Copier"
 BINARY_NAME="DVDCopier"
 APP_BUNDLE="${APP_NAME}.app"
 CONTENTS="${APP_BUNDLE}/Contents"

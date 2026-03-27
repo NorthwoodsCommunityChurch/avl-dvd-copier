@@ -2,9 +2,9 @@ import DiskArbitration
 import Foundation
 
 /// Watches for optical disc insertion and ejection using macOS DiskArbitration framework.
-class DiscWatcher {
+class DiscWatcher: ObservableObject {
     private var session: DASession?
-    var onDiscInserted: (() -> Void)?
+    var onDiscInserted: ((_ mediaKind: String, _ volumePath: URL?) -> Void)?
     var onDiscEjected: (() -> Void)?
 
     func start() {
@@ -19,8 +19,8 @@ class DiscWatcher {
         let appeared: DADiskAppearedCallback = { disk, context in
             guard let context else { return }
             let watcher = Unmanaged<DiscWatcher>.fromOpaque(context).takeUnretainedValue()
-            if watcher.isOpticalDisc(disk) {
-                watcher.onDiscInserted?()
+            if let info = watcher.opticalDiscInfo(disk) {
+                watcher.onDiscInserted?(info.mediaKind, info.volumePath)
             }
         }
 
@@ -45,10 +45,20 @@ class DiscWatcher {
         session = nil
     }
 
+    /// Returns media kind and volume path if this is an optical disc, nil otherwise.
+    private func opticalDiscInfo(_ disk: DADisk) -> (mediaKind: String, volumePath: URL?)? {
+        guard let desc = DADiskCopyDescription(disk) as? [String: Any] else { return nil }
+        guard let mediaKind = desc[kDADiskDescriptionMediaKindKey as String] as? String,
+              mediaKind.contains("DVD") || mediaKind.contains("CD") || mediaKind.contains("BD")
+        else { return nil }
+
+        let volumePath = desc[kDADiskDescriptionVolumePathKey as String] as? URL
+        return (mediaKind, volumePath)
+    }
+
     /// Check if a disk is optical media (DVD, CD, or Blu-ray).
     private func isOpticalDisc(_ disk: DADisk) -> Bool {
         guard let desc = DADiskCopyDescription(disk) as? [String: Any] else { return false }
-        // DAMediaKind is e.g. "IODVDMedia", "IOCDMedia", "IOBDMedia"
         if let mediaKind = desc[kDADiskDescriptionMediaKindKey as String] as? String {
             return mediaKind.contains("DVD") || mediaKind.contains("CD") || mediaKind.contains("BD")
         }

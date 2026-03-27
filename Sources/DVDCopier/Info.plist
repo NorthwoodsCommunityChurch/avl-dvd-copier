@@ -5,11 +5,11 @@
     <key>CFBundleExecutable</key>
     <string>DVDCopier</string>
     <key>CFBundleIdentifier</key>
-    <string>com.northwoodschurch.dvdcopier</string>
+    <string>com.northwoodschurch.disccopier</string>
     <key>CFBundleName</key>
-    <string>DVD Copier</string>
+    <string>Disc Copier</string>
     <key>CFBundleDisplayName</key>
-    <string>DVD Copier</string>
+    <string>Disc Copier</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0.0</string>
     <key>CFBundleVersion</key>
@@ -28,12 +28,12 @@
     <true/>
     <!-- Sparkle Auto-Update -->
     <key>SUFeedURL</key>
-    <string>https://northwoodscommunitychurch.github.io/app-updates/appcast-dvdcopier.xml</string>
+    <string>https://northwoodscommunitychurch.github.io/app-updates/appcast-disccopier.xml</string>
     <key>SUPublicEDKey</key>
     <string>VIMxKZmmRokdMcHK5d3QU4+qHgBglmkVFP5aAVvxgqM=</string>
     <key>SUEnableAutomaticChecks</key>
     <true/>
-    <!-- Non-sandboxed: needs to run MakeMKV CLI and read DVDs -->
+    <!-- Non-sandboxed: needs to run MakeMKV CLI, afconvert, and access disc volumes -->
     <key>com.apple.security.app-sandbox</key>
     <false/>
 </dict>
