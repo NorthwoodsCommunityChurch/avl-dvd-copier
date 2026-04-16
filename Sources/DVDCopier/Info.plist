@@ -28,7 +28,7 @@
     <true/>
     <!-- Sparkle Auto-Update -->
     <key>SUFeedURL</key>
-    <string>https://northwoodscommunitychurch.github.io/app-updates/appcast-disccopier.xml</string>
+    <string>https://northwoodscommunitychurch.github.io/app-updates/appcast-dvdcopier.xml</string>
     <key>SUPublicEDKey</key>
     <string>VIMxKZmmRokdMcHK5d3QU4+qHgBglmkVFP5aAVvxgqM=</string>
     <key>SUEnableAutomaticChecks</key>
