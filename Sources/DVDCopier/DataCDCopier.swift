@@ -68,6 +68,7 @@ class DataCDCopier: ObservableObject {
     // MARK: - Copy
 
     func copy(outputDir: URL) {
+        guard !isCopying else { return }
         guard let vol = volumePath, !filesToCopy.isEmpty else { return }
 
         let folderName = discName.isEmpty ? "Data CD" : discName

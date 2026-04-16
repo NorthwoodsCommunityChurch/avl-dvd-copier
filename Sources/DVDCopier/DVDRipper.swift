@@ -18,13 +18,12 @@ class DVDRipper: ObservableObject {
 
     /// Called when all titles finish ripping successfully
     var onRipComplete: (() -> Void)?
+    /// Called when MakeMKV can't read the disc (MSG:5010) — allows fallback to file copy
+    var onScanFailed: (() -> Void)?
 
     private var ripProcess: Process?
     /// True when DiskArbitration has confirmed an optical disc is present
     var discConfirmedByDA = false
-    /// True while ejecting after a rip — blocks DA insert callbacks from triggering scans
-    var isEjecting = false
-
     private let makemkvconPath = "/Applications/MakeMKV.app/Contents/MacOS/makemkvcon"
 
     func resetDisc() {
@@ -135,15 +134,14 @@ class DVDRipper: ObservableObject {
             }
 
             // MSG:5010 — "Failed to open disc"
-            // Show a status message (not an error dialog) so user can rescan or eject.
             if line.contains("MSG:5010") {
                 if discConfirmedByDA {
                     discDetected = true
-                    // Extract disc name from DRV line if we didn't get it from CINFO
                     if discName.isEmpty, let name = extractDRVDiscName(driveDescription) {
                         discName = name
                     }
                     statusMessage = "Could not read disc — try Rescan or eject"
+                    onScanFailed?()
                 } else {
                     discDetected = false
                 }
@@ -203,6 +201,7 @@ class DVDRipper: ObservableObject {
             errorMessage = "MakeMKV is not installed."
             return
         }
+        guard !isRipping else { return }
 
         isRipping = true
         isComplete = false
@@ -257,13 +256,20 @@ class DVDRipper: ObservableObject {
                     self.isComplete = true
                     self.progress = 1.0
                     self.statusMessage = "Done!"
+                    self.onRipComplete?()
                 } else if p.terminationStatus != 15 {
                     self.errorMessage = "Rip failed (exit code \(p.terminationStatus))"
                 }
             }
         }
 
-        try? process.run()
+        do {
+            try process.run()
+        } catch {
+            errorMessage = "Failed to start rip: \(error.localizedDescription)"
+            isRipping = false
+            ripProcess = nil
+        }
     }
 
     /// Rip multiple titles sequentially. Creates a disc-name subfolder when more than one title.
@@ -272,6 +278,7 @@ class DVDRipper: ObservableObject {
             errorMessage = "MakeMKV is not installed."
             return
         }
+        guard !isRipping else { return }
         guard !titleIndices.isEmpty else { return }
 
         // If multiple titles, create a subfolder named after the disc
@@ -376,9 +383,6 @@ class DVDRipper: ObservableObject {
                         if self.currentRipIndex >= self.totalRipCount {
                             self.statusMessage = "Done!"
                             self.isRipping = false
-                            // Block DA callbacks immediately — MakeMKV releasing the
-                            // disc triggers a spurious "appeared" event before ejectAfterRip runs
-                            self.isEjecting = true
                         }
                     } else if p.terminationStatus == 15 {
                         // Cancelled
@@ -391,7 +395,14 @@ class DVDRipper: ObservableObject {
                 }
             }
 
-            try? process.run()
+            do {
+                try process.run()
+            } catch {
+                errorMessage = "Failed to start rip: \(error.localizedDescription)"
+                isRipping = false
+                ripProcess = nil
+                continuation.resume()
+            }
         }
     }
 
@@ -453,7 +464,6 @@ class DVDRipper: ObservableObject {
                         self.progress = 1.0
                         self.statusMessage = "Done!"
                         self.isRipping = false
-                        self.isEjecting = true
                     } else if p.terminationStatus == 15 {
                         self.isRipping = false
                     } else {
@@ -464,7 +474,14 @@ class DVDRipper: ObservableObject {
                 }
             }
 
-            try? process.run()
+            do {
+                try process.run()
+            } catch {
+                errorMessage = "Failed to start rip: \(error.localizedDescription)"
+                isRipping = false
+                ripProcess = nil
+                continuation.resume()
+            }
         }
     }
 
@@ -505,6 +522,12 @@ class DVDRipper: ObservableObject {
     // MARK: - Cancel
 
     func cancel() {
+        if let pipe = ripProcess?.standardOutput as? Pipe {
+            pipe.fileHandleForReading.readabilityHandler = nil
+        }
+        if let pipe = ripProcess?.standardError as? Pipe {
+            pipe.fileHandleForReading.readabilityHandler = nil
+        }
         ripProcess?.terminate()
         ripProcess = nil
         isRipping = false

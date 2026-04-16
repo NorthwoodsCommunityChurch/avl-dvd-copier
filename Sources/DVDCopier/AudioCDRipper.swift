@@ -83,6 +83,7 @@ class AudioCDRipper: ObservableObject {
     // MARK: - Rip
 
     func rip(trackIDs: [Int], outputDir: URL) {
+        guard !isRipping else { return }
         let selectedTracks = tracks.filter { trackIDs.contains($0.id) }
         guard !selectedTracks.isEmpty, let vol = volumePath else { return }
 
@@ -138,8 +139,8 @@ class AudioCDRipper: ObservableObject {
             ripProcess = process
             process.executableURL = URL(fileURLWithPath: "/usr/bin/afconvert")
             process.arguments = ["-d", "LEI16", "-f", "WAVE", input.path, output.path]
-            process.standardOutput = Pipe()
-            process.standardError = Pipe()
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
 
             process.terminationHandler = { [weak self] p in
                 Task { @MainActor [weak self] in
@@ -152,6 +153,9 @@ class AudioCDRipper: ObservableObject {
                 try process.run()
             } catch {
                 ripProcess = nil
+                Task { @MainActor [weak self] in
+                    self?.errorMessage = "Failed to launch afconvert: \(error.localizedDescription)"
+                }
                 continuation.resume(returning: false)
             }
         }
