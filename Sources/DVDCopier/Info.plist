@@ -5,11 +5,11 @@
     <key>CFBundleExecutable</key>
     <string>DVDCopier</string>
     <key>CFBundleIdentifier</key>
-    <string>com.northwoodschurch.disccopier</string>
+    <string>com.northwoodschurch.dvdcopier</string>
     <key>CFBundleName</key>
-    <string>Disc Copier</string>
+    <string>DVD Copier</string>
     <key>CFBundleDisplayName</key>
-    <string>Disc Copier</string>
+    <string>DVD Copier</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0.0</string>
     <key>CFBundleVersion</key>
